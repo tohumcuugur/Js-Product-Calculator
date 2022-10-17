@@ -65,7 +65,17 @@ const ProductController = (function () {
         getCurrentProduct: function(){
             return data.selectedProduct;
         },
-
+        updateProduct : function(name,price){
+            let product = null;
+            data.products.forEach((prd) =>{
+                if(prd.id == data.selectedProduct.id){
+                    prd.name = name;
+                    prd.price = parseFloat(price);
+                    product = prd;
+                }
+            })
+            return product;
+        }
     }  
 
 })();
@@ -83,7 +93,8 @@ const UIController = (function () {
         productPrice: "#productPrice",
         productCard: "#productCard",
         totalTl: "#total-tl",
-        totalUsd: "#total-usd"
+        totalUsd: "#total-usd",
+        productListItems : "#item-list tr", // ürün güncellemesi için edit yaptığımızda arka planda olan bg-warning'i silmek için tr'leri seçmemiz gerekiyor.
     }
 
     return{
@@ -134,11 +145,15 @@ const UIController = (function () {
             document.querySelector(Selectors.totalTl).textContent = total*18.57;
         },
         addProductToForm : function(){
+
             const selectedProduct = ProductController.getCurrentProduct();
             document.querySelector(Selectors.productName).value = selectedProduct.name;
             document.querySelector(Selectors.productPrice).value = selectedProduct.price;
         },
-        addingState : function(){
+        addingState : function(item){
+            if(item){
+                item.classList.remove("bg-warning");
+            }
             UIController.clearInputs();
             document.querySelector(Selectors.addButton).style.display="inline";
             document.querySelector(Selectors.updateButton).style.display="none";
@@ -155,6 +170,18 @@ const UIController = (function () {
             document.querySelector(Selectors.updateButton).style.display="inline";
             document.querySelector(Selectors.deleteButton).style.display="inline";
             document.querySelector(Selectors.cancelButton).style.display="inline";
+        },
+        updateProduct : function(prd){
+            let updatedItem = null;
+            let items = document.querySelectorAll(Selectors.productListItems);
+            items.forEach((item)=>{
+                if(item.classList.contains("bg-warning")){
+                    item.children[1].textContent = prd.name // 0. index id 1 index product name ikinci index ise product price 
+                    item.children[2].textContent = prd.price + "$";
+                    updatedItem = item;
+                }
+            });
+            return updatedItem;
         }
     }
 
@@ -171,8 +198,14 @@ const App = (function (ProductCtrl,UICtrl) {
         //add product event
         document.querySelector(UISelectors.addButton).addEventListener("click",productAddSubmit);
 
-        //edit product event
-        document.querySelector(UISelectors.productList).addEventListener("click",productEditSubmit);
+        //edit product click 
+        document.querySelector(UISelectors.productList).addEventListener("click",productEditClick);
+
+        //edit product submit
+        document.querySelector(UISelectors.updateButton).addEventListener("click",editProductSubmit);
+
+        //cancel button click
+        document.querySelector(UISelectors.cancelButton).addEventListener("click", cancelUpdate);
 
     }
     const productAddSubmit = (e) =>{
@@ -200,7 +233,7 @@ const App = (function (ProductCtrl,UICtrl) {
         }
 
     }
-    const productEditSubmit = (e) =>{
+    const productEditClick = (e) =>{
         e.preventDefault(e);
         if(e.target.classList.contains('edit-product')){
             //console.log(e.target.parentNode.previousElementSibling.previousElementSibling.previousElementSibling.textContent); // Edit butonuna tıkladığımız zaman ürünü editleyebilmek için id sine ulaşmamız gerekiyor. e.target ile <i> tag'ine ulaşırız. .parentNode ile parent elemanı olan td'ye ulaşırız. Ordanda 3 element önceye giderek id'nin bulunduğu elemente ulaşıp textContent ile id numarasını alırız.
@@ -219,6 +252,34 @@ const App = (function (ProductCtrl,UICtrl) {
             UICtrl.editState(e.target.parentNode.parentNode);
         }
 
+    };
+    const editProductSubmit = (e) => {
+        e.preventDefault();
+        const productName = document.querySelector(UISelectors.productName).value;
+        const productPrice = document.querySelector(UISelectors.productPrice).value;
+
+        if(productName !== "" && productPrice !== ""){
+
+            //update product
+            const updatedProduct = ProductCtrl.updateProduct(productName, productPrice);
+
+            //update ui
+            let item = UICtrl.updateProduct(updatedProduct);
+
+            //get total
+            const total = ProductCtrl.getTotal();
+
+            //show total
+            UICtrl.showTotal(total);
+
+            UICtrl.addingState(item);
+
+        }
+        // console.log(" UPDATE BUTTON CLİCK   ");
+    };
+    const cancelUpdate = (e) => {
+        e.preventDefault();
+        UICtrl.addingState();
     };
 
     return{
