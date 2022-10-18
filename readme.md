@@ -6,4 +6,4 @@ This is a product calculator app. U can add product to the list, u can edit the 
 
 
 <h1>FOR DEMO</h1>
-<h2></h2>
+<h2>https://product-calculator-app.netlify.app/</h2>
