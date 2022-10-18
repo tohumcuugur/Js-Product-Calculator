@@ -1,5 +1,48 @@
 // Storage Controller
-const storageController = (function () {
+const StorageController = (function () {
+    
+    return{
+        storeProduct: function (product){
+            let products;
+            if(localStorage.getItem("products") === null){ //eğer null değer döndürüyorsa daha önce products isminde bir alan ls'de oluşturulmamıştır.Daha sonra gelen products bilgisini boş bir dizi oluşturup atarız.
+                products = [];
+                products.push(product);
+            }else{
+                products = JSON.parse(localStorage.getItem("products")) 
+                products.push(product);
+            }
+            localStorage.setItem("products", JSON.stringify(products)); 
+        },
+        getProducts : function (){
+            let products;
+            if(localStorage.getItem("products") === null){
+                products = [];
+            }else{
+                products = JSON.parse(localStorage.getItem("products"));
+            }
+            return products;
+        },
+        updateProduct: function(product){
+            let products = JSON.parse(localStorage.getItem("products"));
+
+            products.forEach(function(prd,index){
+                if(product.id === prd.id){
+                    products.splice(index, 1, product);
+                }
+            });
+            localStorage.setItem("products", JSON.stringify(products));
+        },
+        deleteProduct: function(id){
+            let products = JSON.parse(localStorage.getItem("products"));
+
+            products.forEach(function(prd,index){
+                if(id === prd.id){
+                    products.splice(index, 1);
+                }
+            });
+            localStorage.setItem("products", JSON.stringify(products));
+        },
+    }
 
 })();
 
@@ -14,10 +57,11 @@ const ProductController = (function () {
     }
 
     const data = {
-        products : [
-            // {id:0, name: 'Monitör' , price: 100},
-            // {id:1, name: 'Klavye' , price: 40},
-        ],
+        products : StorageController.getProducts(), // Ürünler artık eklendiği gibi ls'e aktarıldığından dolayı ürün listesi için bir array'e ihtiyacımız kalmadı.
+        // products : [
+        //     // {id:0, name: 'Monitör' , price: 100},
+        //     // {id:1, name: 'Klavye' , price: 40},
+        // ],
         selectedProduct : null,
         totalPrice:0
     }
@@ -29,25 +73,6 @@ const ProductController = (function () {
         },
         getData : function() {
             return data;
-        },
-        addProduct : function(name,price){
-            let id ;
-            if(data.products.length > 0){
-                id = data.products[data.products.length - 1].id+1 //data.length'ten  1 çıkartarak index numarasına ulaşırız. Bunun id bilgisine bir eklersek'te sonraki elemanı yazdırmış oluruz.
-            }else{
-                id = 0;
-            }
-            const newProduct = new Product(id,name,parseFloat(price));
-            data.products.push(newProduct);
-            return newProduct;
-        },
-        getTotal: function() {
-            let total = 0;
-            data.products.forEach((item) =>{
-                total += item.price;
-            })
-            data.totalPrice = total;
-            return data.totalPrice;
         },
         getProductById: function(id){
             let product = null;
@@ -64,6 +89,18 @@ const ProductController = (function () {
         },
         getCurrentProduct: function(){
             return data.selectedProduct;
+        },
+        addProduct : function(name,price){
+            let id ;
+            if(data.products.length > 0){
+                id = data.products[data.products.length-1].id+1 //data.length'ten  1 çıkartarak index numarasına ulaşırız. Bunun id bilgisine bir eklersek'te sonraki elemanı yazdırmış oluruz.
+                console.log(id)
+            }else{
+                id = 0;
+            }
+            const newProduct = new Product(id,name,parseFloat(price));
+            data.products.push(newProduct);
+            return newProduct;
         },
         updateProduct : function(name,price){
             let product = null;
@@ -82,6 +119,14 @@ const ProductController = (function () {
                     data.products.splice(index,1);
                 }
             })
+        },
+        getTotal: function() {
+            let total = 0;
+            data.products.forEach((item) =>{
+                total += item.price;
+            })
+            data.totalPrice = total;
+            return data.totalPrice;
         },
     }  
 
@@ -113,7 +158,7 @@ const UIController = (function () {
                     <tr>
                         <td>${prd.id}</td>
                         <td>${prd.name}</td>
-                        <td>${prd.price}</td>
+                        <td>${prd.price} $</td>
                         <td class="text-end">
                         <i class="fas fa-edit bg-success p-2 rounded text-white edit-product"></i>
                         </td>
@@ -132,13 +177,25 @@ const UIController = (function () {
                 <tr>
                     <td>${prd.id}</td>
                     <td>${prd.name}</td>
-                    <td>${prd.price + "$"} </td>
+                    <td>${prd.price} $</td>
                     <td class="text-end">
                         <i class="fas fa-edit bg-success p-2 rounded text-white edit-product"></i>
                     </td>
                 </tr>
             `;
             document.querySelector(Selectors.productList).innerHTML += item;
+        },
+        updateProduct : function(prd){
+            let updatedItem = null;
+            let items = document.querySelectorAll(Selectors.productListItems);
+            items.forEach((item)=>{
+                if(item.classList.contains("bg-warning")){
+                    item.children[1].textContent = prd.name // 0. index id 1 index product name ikinci index ise product price 
+                    item.children[2].textContent = prd.price + "$";
+                    updatedItem = item;
+                }
+            });
+            return updatedItem;
         },
         clearInputs : function(){
             document.querySelector(Selectors.productName).value = "";
@@ -164,6 +221,14 @@ const UIController = (function () {
             document.querySelector(Selectors.productName).value = selectedProduct.name;
             document.querySelector(Selectors.productPrice).value = selectedProduct.price;
         },
+        deleteProduct : function(){
+            let items = document.querySelectorAll(Selectors.productListItems);
+            items.forEach((item) =>{
+                if(item.classList.contains("bg-warning")){
+                    item.remove();
+                }
+            })
+        },
         addingState : function(){
             UIController.clearWarnings();
             UIController.clearInputs();
@@ -179,32 +244,13 @@ const UIController = (function () {
             document.querySelector(Selectors.deleteButton).style.display="inline";
             document.querySelector(Selectors.cancelButton).style.display="inline";
         },
-        updateProduct : function(prd){
-            let updatedItem = null;
-            let items = document.querySelectorAll(Selectors.productListItems);
-            items.forEach((item)=>{
-                if(item.classList.contains("bg-warning")){
-                    item.children[1].textContent = prd.name // 0. index id 1 index product name ikinci index ise product price 
-                    item.children[2].textContent = prd.price + "$";
-                    updatedItem = item;
-                }
-            });
-            return updatedItem;
-        },
-        deleteProduct : function(){
-            let items = document.querySelectorAll(Selectors.productListItems);
-            items.forEach((item) =>{
-                if(item.classList.contains("bg-warning")){
-                    item.remove();
-                }
-            })
-        }
+
     }
 
 })();
 
 // App Controller
-const App = (function (ProductCtrl,UICtrl) {
+const App = (function (ProductCtrl,UICtrl,StorageCtrl) {
 
     const UISelectors = UIController.getSelectors();
 
@@ -226,7 +272,7 @@ const App = (function (ProductCtrl,UICtrl) {
         //delete button click
         document.querySelector(UISelectors.deleteButton).addEventListener("click",deleteProductSubmit);
 
-    }
+    };
     const productAddSubmit = (e) =>{
         e.preventDefault();
         const productName = document.querySelector(UISelectors.productName).value;
@@ -238,7 +284,11 @@ const App = (function (ProductCtrl,UICtrl) {
             // console.log(newProduct);
 
             //add item to list
-            UIController.addProduct(newProduct);
+            UICtrl.addProduct(newProduct);
+
+            //add product to local storage
+            StorageCtrl.storeProduct(newProduct);
+
 
             //get total
             const total = ProductCtrl.getTotal();
@@ -248,10 +298,11 @@ const App = (function (ProductCtrl,UICtrl) {
             UICtrl.showTotal(total);
 
             //clearInputs
-            UIController.clearInputs();
+            UICtrl.clearInputs();
         }
 
-    }
+
+    };
     const productEditClick = (e) =>{
         e.preventDefault(e);
         if(e.target.classList.contains('edit-product')){
@@ -292,7 +343,11 @@ const App = (function (ProductCtrl,UICtrl) {
             //show total
             UICtrl.showTotal(total);
 
+            //update local storage
+            StorageCtrl.updateProduct(updatedProduct);
+
             UICtrl.addingState();
+
 
         }
         // console.log(" UPDATE BUTTON CLİCK   ");
@@ -317,6 +372,10 @@ const App = (function (ProductCtrl,UICtrl) {
         const total = ProductCtrl.getTotal();
         //show total
         UICtrl.showTotal(total); //delete olduktan sonra güncel ücreti hesaplaması.
+
+        //delete from local storage
+        StorageCtrl.deleteProduct(selectedProduct.id);
+
         UICtrl.addingState();
 
         if(total == 0){ // ürün yoksa productCard div'ini gizler
@@ -333,14 +392,16 @@ const App = (function (ProductCtrl,UICtrl) {
             if(products.length == 0){
                 UICtrl.hideCard();
             }else{
-                // console.log(products);
                 UICtrl.createProductList(products);
-                //load event Listeners
             }
+            //get total
+            const total = ProductCtrl.getTotal();
+            //show total
+            UICtrl.showTotal(total); //delete olduktan sonra güncel ücreti hesaplaması.
             loadEventListeners()
         }
     }
 
-})(ProductController,UIController);
+})(ProductController,UIController,StorageController);
 
 App.init();
